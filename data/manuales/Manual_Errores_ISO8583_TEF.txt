@@ -1,0 +1,37 @@
+DOCUMENTO TÉCNICO OPERATIVO — MESA DE AYUDA NIVEL 2
+Módulo: Diagnóstico de Transacciones TEF y Mensajería ISO 8583
+Sistemas Afectados: Pasarela Khipu, Switch Interbancario, Core CMF
+Versión del Documento: 2.4 - Uso Interno Banco FinTech Andes
+
+
+1. TABLA DE CÓDIGOS DE ERROR ISO 8583 Y PROTOCOLOS DE RESOLUCIÓN
+
+
+* Código 51 — Fondo Insuficiente (NSF):
+  - Descripción: El switch emisor rechaza la operación debido a que la cuenta de origen no cuenta con el saldo disponible necesario para cubrir el monto solicitado más la comisión correspondiente.
+  - Causa Raíz Frecuente: Retención preventiva de fondos, sobregiro en el límite diario de transferencias o actualización pendiente de cartola.
+  - Acción Nivel 2: Verificar en la consola interna si existe un saldo retenido. Si el saldo contable coincide pero el disponible es 0, instructar al operador de Nivel 1 para que el usuario revise su app o modifique su límite diario TEF.
+
+* Código 68 — Respuesta Tardía / Timeout Banco Destino:
+  - Descripción: La solicitud de abono enviada mediante la mensajería ISO 8583 no recibió confirmación de ACK/SYN por parte de la institución financiera receptora dentro de los 15 segundos estándar.
+  - Causa Raíz Frecuente: Latencia en la red interbancaria o saturación en el core del banco receptor.
+  - Acción Nivel 2: No reintentar manualmente de inmediato para evitar duplicidad de abono. Cambiar el estado del ticket a "PENDIENTE_REINTENTO" y ejecutar la herramienta de telemetría para revisar la salud de la API TEF.
+
+* Código 91 — Emisor / Switch CMF Fuera de Línea:
+  - Descripción: El canal de interconexión con la entidad receptora se encuentra en estado degraded o completamente inalcanzable.
+  - Causa Raíz Frecuente: Caída de la interfaz de comunicación con la CMF o mantención programada no notificada por la entidad externa.
+  - Acción Nivel 2: Escalar la traza al equipo de Infraestructura & Comunicaciones y verificar la matriz de disponibilidad del Switch CMF.
+
+* Código 05 — Rechazo General / Transacción No Autorizada:
+  - Descripción: El sistema de riesgo o el core bancario bloqueó la operación por reglas de seguridad predefinidas.
+  - Causa Raíz Frecuente: Alerta por patrón atípico de transferencia, RUT de destino en lista de restricción o cuenta bloqueada por intentos fallidos.
+  - Acción Nivel 2: No proporcionar detalles del motivo al cliente por normativa de seguridad. Transferir el caso directamente al área de Prevención de Fraude y Seguridad Bancaria (Nivel 3).
+
+
+2. CUMPLIMIENTO NORMATIVO Y PROTECCIÓN DE DATOS (CMF)
+
+
+En conformidad con las directrices regulatorias de la Comisión para el Mercado Financiero (CMF) sobre protección de datos personales y seguridad de la información:
+
+- Queda estrictamente prohibido adjuntar o procesar logs de auditoría conteniendo datos sensibles en formato plano (RUT de clientes, números de cuenta de 10 a 16 dígitos o números de tarjeta).
+- Todo registro técnico, payload JSON o traza ISO 8583 que requiera ser analizado por herramientas externas o sistemas automatizados de diagnóstico debe pasar previamente por un proceso de sanitización (enmascaramiento de PII) reemplazando la información sensible por sus respectivos tokens de anonimización ([RUT_ANONIMIZADO] / [CUENTA_ANONIMIZADA]).
